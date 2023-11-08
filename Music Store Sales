@@ -1,0 +1,134 @@
+Data base: https://www.sqlitetutorial.net/sqlite-sample-database/
+
+-- What are the top tracks by appearence in playlist?
+SELECT tracks.Name AS "Track Name", COUNT(playlist_track.PlaylistId) AS "# of playlists track is in" 
+FROM playlist_track
+JOIN tracks
+ON playlist_track.TrackId = tracks.TrackId
+GROUP BY playlist_track.TrackId
+ORDER BY 2 DESC
+LIMIT 50;
+--- 41 tracks appear in all 5 playlists.
+
+-- Which tracks generated the most revenue?
+SELECT invoice_items.TrackId, tracks.Name, 
+	SUM(invoice_items.UnitPrice * invoice_items.Quantity) AS "Total Revenue"
+FROM invoice_items
+LEFT JOIN tracks
+ON invoice_items.TrackId = tracks.TrackId
+GROUP BY 1
+ORDER BY 3 DESC
+LIMIT 10;
+
+-- Which ablums generated the most revenue?
+SELECT tracks.AlbumId, albums.Title AS "Album Title", 
+	SUM(invoice_items.UnitPrice*invoice_items.Quantity) AS "Total Revenue"
+FROM invoice_items
+	JOIN tracks
+	ON invoice_items.TrackId = tracks.TrackId
+	JOIN albums
+	ON tracks.AlbumId = albums.AlbumId
+GROUP BY 1 
+ORDER BY 3 DESC
+LIMIT 10;
+
+-- What are the top 5 genres by revenue?
+SELECT tracks.GenreId, genres.Name AS "Genre", 
+	ROUND(SUM(invoice_items.UnitPrice*invoice_items.Quantity),2) AS "Total Revenue"
+FROM invoice_items
+	JOIN tracks
+	ON invoice_items.TrackId = tracks.TrackId
+	JOIN genres
+	ON tracks.GenreId = genres.GenreId
+GROUP BY 1 
+ORDER BY 3 DESC
+LIMIT 5;
+
+-- Which countries have the highest sales revenue and what percentage of total revenue does each country make up?
+WITH table1 AS (
+SELECT SUM(invoices.Total) AS "total_revenue" 
+	FROM invoices)	
+SELECT BillingCountry AS "Country", SUM(Total) AS "Total Revenue",
+	round(((SUM(Total)/table1.total_revenue)*100),2) AS "% of Total Revenue"
+FROM invoices, table1
+GROUP BY 1
+ORDER BY 3 DESC;
+
+-- How mnay customers did each employee suppert, what was their total revenue, and what was their average revenue per sale?
+WITH 		
+total_sales AS (SELECT CustomerId, SUM(Total) AS "sales"
+	FROM invoices
+	GROUP BY CustomerId)
+SELECT employees.LastName, employees.FirstName, 
+	COUNT(customers.CustomerId) AS "# of Customers Supported",
+	SUM(total_sales.sales) AS "Total Revenue",
+	ROUND(AVG(sales), 2) AS "Average Revenue Per Sale"
+FROM employees
+    	JOIN customers
+	ON employees.EmployeeId = customers.SupportRepId
+	JOIN total_sales USING(CustomerId)
+GROUP BY EmployeeId;
+
+-- Do longer or shorter length albums tend to generate more revenue?
+WITH
+album_len AS (SELECT AlbumId, COUNT(TrackId) AS "len"
+FROM tracks
+GROUP BY 1
+),
+total_rev AS (SELECT tracks.AlbumId, 
+	ROUND(SUM(invoice_items.UnitPrice * invoice_items.Quantity), 2) AS "rev"
+FROM invoice_items
+JOIN tracks USING(TrackId)
+GROUP BY 1
+)
+SELECT len AS "Number of tracks in album", 
+	ROUND(AVG(rev), 2) AS "Average album revenue"
+FROM album_len
+JOIN total_rev USING(AlbumId)
+GROUP BY 1
+ORDER BY 2 DESC;
+
+--Is the number of times a track appears in different playlists a good indicator of sales?
+WITH
+pl_appearances AS (SELECT TrackId, COUNT(PlaylistId) AS "appearances" 
+FROM playlist_track
+GROUP BY TrackId
+),
+total_rev AS (SELECT tracks.TrackId, 
+	ROUND(SUM(invoice_items.UnitPrice * invoice_items.Quantity), 2) AS "rev"
+FROM invoice_items
+JOIN tracks USING(TrackId)
+GROUP BY 1
+)
+SELECT appearances AS "No. of playlist track is in", 
+	ROUND(AVG(rev), 2) AS "Average track revenue",
+	ROUND(SUM(rev), 2) AS "Total Revenue"
+FROM pl_appearances
+JOIN total_rev USING(TrackId)
+GROUP BY 1
+ORDER BY 2 DESC;
+
+-- How much revenue is generated each year, and what is the percent change in revenue from the previous year?
+  1) For all years:
+	WITH previous_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS "Year", SUM(Total) as "Revenue"
+	FROM invoices
+	GROUP BY 1
+	),
+	current_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS "Year", SUM(Total) as "Revenue"
+	FROM invoices
+	GROUP BY 1
+	)
+	SELECT *, ROUND((current_year.Revenue-previous_year.Revenue)/previous_year.Revenue * 100, 2) AS "% Change"
+	FROM current_year, previous_year
+	WHERE previous_year.Year = current_year.Year - 1;
+  2) For an individual year:
+	WITH previous_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS "Year", SUM(Total) as "Revenue"
+	FROM invoices
+	WHERE CAST(strftime('%Y', InvoiceDate) AS INTEGER) IN ('2009')
+	),
+	current_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS "Year", SUM(Total) as "Revenue"
+	FROM invoices
+	WHERE CAST(strftime('%Y', InvoiceDate) AS INTEGER) IN ('2010')
+	)
+	SELECT *, ROUND((current_year.Revenue-previous_year.Revenue)/previous_year.Revenue * 100, 2) AS "% Change"
+	FROM current_year, previous_year;
