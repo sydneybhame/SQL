@@ -14,48 +14,108 @@ VALUES
   ("Garth Nix", 1963, "AUS"),
   ("John Flanagan", 1944, "AUS");
   
+ CREATE TABLE series (
+    id INTEGER PRIMARY KEY,
+    author_id INTEGER,
+    name TEXT
+);
+    
+INSERT INTO series (author_id, name) 
+VALUES 
+  (1, "Mistborn"),
+  (1, "Stormlight Archive"),
+  (2, "Court of Thorns and Roses"),
+  (2, "Crescent City"),
+  (3, "Lord of the Rings"),
+  (4, "Old Kingdom"),
+  (5, "InterWorld"),
+  (6, "The Royal Ranger");
+  
   CREATE TABLE books (
     id INTEGER PRIMARY KEY,
     author_id INTEGER,
     title TEXT,
-    series TEXT,
+    series_id INTEGER,
     year TEXT
 );
     
-INSERT INTO books (author_id, title, series, year) 
+INSERT INTO books (author_id, title, series_id, year) 
 VALUES 
-  (1, "The Way of Kings", "Stormlight Archive", "2010"),
-  (1, "Words of Radiance", "Stormlight Archive", "2012"),
-  (1, "Oathbringer", "Stormlight Archive", "2017"),
-  (1, "Rhythm of War", "Stormlight Archive", "2020"),
-  (1, "Mistborn", "Mistborn", "2006"),
-  (1, "The Well of Ascension", "Mistborn", "2007"),
-  (1, "The Hero of Ages", "Mistborn", "2008"),
-  (1, "The Alloy of Law", "Mistborn", "2011"),
-  (1, "Shadows of Self", "Mistborn", "2015"),
-  (1, "Bands of Mourning", "Mistborn", "2016"),
-  (2, "House of Earth and Blood", "Crescent City", "2020"),
-  (2, "House of Sky and Breath", "Crescent City", "2022"),
-  (2, "House of Flame and Shadow", "Crescent City", "2024"),
-  (2, "A Court of Thorns and Roses", "Court of Thorns and Roses", "2015"),
-  (2, "A Court of Mist and Fury", "Court of Thorns and Roses", "2016"),
-  (2, "A Court of Wings and Ruin", "Court of Thorns and Roses", "2017"),
-  (2, "A Court of Frost and Starlight","Court of Thorns and Roses", "2018"),
-  (2, "A Court of Silver Flames", "Court of Thorns and Roses", "2021"),
-  (3, "The Fellowship of the Ring", "Lord of the Rings", "1954"),
-  (3, "The Two Towers", "Lord of the Rings", "1954"),
-  (3, "The Return of the King", "Lord of the Rings", "1955"),
-  (4, "InterWorld", "InterWorld", "2007"),
-  (4, "The Silver Dream", "InterWorld", "2013"),
-  (4, "Eternity's Wheel", "InterWorld", "2015"),
-  (5, "Sabriel", "Old Kingdom", "1996"),
-  (5, "Lirael", "Old Kingdom", "2001"),
-  (5, "Abhorsen", "Old Kingdom", "2003"),
-  (6, "The Royal Ranger", "The Royal Ranger", "2013"),
-  (6, "The Red Fox Clan", "The Royal Ranger", "2018"),
-  (6, "Duel at Araluen", "The Royal Ranger", "2019"),
-  (6, "The Missing Prince", "The Royal Ranger", "1920"),
-  (6, "Escape from Falaise", "The Royal Ranger", "2021"),
-  (6, "Arazan's Wolves", "The Royal Ranger", "2023");
+  (1, "The Way of Kings", 2, "2010"),
+  (1, "Words of Radiance", 2, "2012"),
+  (1, "Oathbringer", 2, "2017"),
+  (1, "Rhythm of War", 2, "2020"),
+  (1, "Mistborn", 1, "2006"),
+  (1, "The Well of Ascension", 1, "2007"),
+  (1, "The Hero of Ages", 1, "2008"),
+  (1, "The Alloy of Law", 1, "2011"),
+  (1, "Shadows of Self", 1, "2015"),
+  (1, "Bands of Mourning", 1, "2016"),
+  (2, "House of Earth and Blood", 4, "2020"),
+  (2, "House of Sky and Breath", 4, "2022"),
+  (2, "House of Flame and Shadow", 4, "2024"),
+  (2, "A Court of Thorns and Roses", 3, "2015"),
+  (2, "A Court of Mist and Fury", 3, "2016"),
+  (2, "A Court of Wings and Ruin", 3, "2017"),
+  (2, "A Court of Frost and Starlight",3, "2018"),
+  (2, "A Court of Silver Flames", 3, "2021"),
+  (3, "The Fellowship of the Ring", 5, "1954"),
+  (3, "The Two Towers", 5, "1954"),
+  (3, "The Return of the King", 5, "1955"),
+  (4, "InterWorld", 7, "2007"),
+  (4, "The Silver Dream", 7, "2013"),
+  (4, "Eternity's Wheel", 7, "2015"),
+  (5, "Sabriel", 6, "1996"),
+  (5, "Lirael", 6, "2001"),
+  (5, "Abhorsen", 6, "2003"),
+  (6, "The Royal Ranger", 8, "2013"),
+  (6, "The Red Fox Clan", 8, "2018"),
+  (6, "Duel at Araluen", 8, "2019"),
+  (6, "The Missing Prince", 8, "1920"),
+  (6, "Escape from Falaise", 8, "2021"),
+  (6, "Arazan's Wolves", 8, "2023");
 
 #Analysis:
+# What series did each author write?
+SELECT authors.fullname, series.name
+FROM authors
+JOIN series
+ON authors.id = series.author_id
+ORDER BY 1;
+
+# How many books has each author published?
+SELECT authors.fullname, COUNT(books.id) AS no_titles_published
+FROM authors
+JOIN books
+ON authors.id = books.author_id
+GROUP BY 1
+ORDER BY 1;
+
+# What is the earliest published book in this database?
+SELECT books.title AS "Title", MIN(CAST(year AS INTEGER)) as "Year Published"
+FROM books;
+
+# How many books were published each year?
+SELECT (CAST(year AS INTEGER)) as "year", COUNT(books.id) "no_books_published"
+FROM books
+GROUP BY 1
+ORDER BY 1;
+
+# Return a list of all books in the database listed with their corrosponding series name and author.
+SELECT b.id, b.title AS "Title",  s.name AS "Series", a.fullname AS "Author"
+FROM authors a
+JOIN books b ON a.id = b.author_id
+JOIN series s ON a.id = s.author_id
+GROUP BY 1;
+
+# Are there any books in the database that are not part of a series?
+SELECT books.title
+FROM books
+WHERE series_id IS NULL;
+
+# Return a list of all books with an author whose name begins with "J", include the series name and if this value is NULL return "Standalone Title".
+SELECT a.fullname as "Author", b.title AS "Title", IFNULL(s.name, "Standalone Title") AS "Series Name"
+FROM authors a
+JOIN books b ON a.id = b.author_id
+LEFT JOIN series s ON b.series_id = s.id
+WHERE a.fullname LIKE "J%";
