@@ -56,38 +56,57 @@ VALUES
     ('Company JJ', 'Manufacturing', 370.0, 3100, 1, 20, 12, 7.6),
     ('Company KK', 'Healthcare', 150.2, 3400, 0, 16, 8, 5.3);
 
+# Analysis:
 
--- What companies have healthcare benefits, and PTO of 22 days or more or maternity leave of 12 weeks or more?
+# 1) Which companies have healthcare benefits *and* PTO of 22 days or more or maternity leave of 12 weeks or more?
 SELECT company_name, industry, employees, paid_time_off_days, maternity_leave_weeks, avg_employee_tenure
 FROM fortune_companies
-WHERE healthcare_benefits = 1 AND (paid_time_off_days >= 22 OR maternity_leave_weeks >=12);
+WHERE healthcare_benefits = 1 
+AND (paid_time_off_days >= 22 OR maternity_leave_weeks >=12);
 
--- What industries have an average of 20 days or more of PTO, excluding the Financials industry?
+# 2) Which industries have an average of at least 20 days of PTO, excluding the Financials industry?
 SELECT industry, ROUND(AVG(paid_time_off_days)) AS avg_pto
 FROM fortune_companies
 WHERE industry != "Financials"
 GROUP BY 1
 HAVING avg_pto >= 20;
 
--- Group companies by size and see how many companies are in each size bracket with companies having less than 2500 employees being "Small", between 2500 and 5000 employees being "Medium", and companies having more than 5000 employees being "Large".
-SELECT COUNT(*) AS no_of_companies, ROUND(AVG(revenue)) AS avg_revenue,
-CASE WHEN employees < 2500 THEN "Small"
+# 3) Assign companies a size of either "Small", "Medium", or "Large" based on number of employees, and count the number of companies in each size.
+SELECT COUNT(*) AS no_of_companies,
+  CASE WHEN employees < 2500 THEN "Small"
   WHEN employees <= 5000 THEN "Medium"
   ELSE "Large"
   END AS "company_size"
 FROM fortune_companies
 GROUP BY company_size;
 
--- What is the total revenue of each industry?
+  # )3.1 Select the names of all companies categorized as "Large".
+    WITH size AS (SELECT company_name,
+      CASE WHEN employees < 2500 THEN "Small"
+      WHEN employees <= 5000 THEN "Medium"
+      ELSE "Large"
+      END AS "company_size"
+    FROM fortune_companies
+    )
+    SELECT company_name
+    FROM size
+    WHERE company_size = "Large";
+
+# 4) What is the total revenue of each industry?
 SELECT industry, ROUND(SUM(revenue),1) AS total_revenue
 FROM fortune_companies
 GROUP BY 1
 ORDER BY 2 DESC;
 
--- What industry generates the most revenue?
+# 5) What industry generates the most revenue?
 WITH industry_rev AS (SELECT industry, ROUND(SUM(revenue)) AS total_rev
 FROM fortune_companies
-GROUP BY industry)
-
+GROUP BY industry
+)
 SELECT industry, MAX(total_rev) AS total_revenue
 FROM industry_rev;
+
+# 6) Which company in the Technology industry has the least revenue, and what's their revenue? 
+SELECT company_name, min(revenue)
+FROM fortune_companies
+WHERE industry = 'Technology';
