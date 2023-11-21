@@ -55,7 +55,8 @@ AND length(orderid) = 6
 AND orderid <> 'Order ID';
 
 # 8. List all the products sold in Los Angeles in February, and include how many of each were sold.
-SELECT Product, SUM(Quantity)
+SELECT Product, 
+    SUM(Quantity)
 FROM BIT_DB.FebSales
 WHERE location LIKE '%Los Angeles%'
 AND length(orderid) = 6
@@ -63,7 +64,8 @@ AND orderid <> 'Order ID'
 GROUP BY Product;
 
 # 9. Which locations in New York received at least 3 orders in January, and how many orders did they each receive?
-SELECT DISTINCT location, COUNT(orderID) AS orders
+SELECT DISTINCT location, 
+    COUNT(orderID) AS orders
 FROM BIT_DB.JanSales
 WHERE location LIKE "%NY%"
 AND length(orderid) = 6 
@@ -73,7 +75,8 @@ HAVING orders > 2
 ORDER BY 2 DESC;
 
 # 10. How many of each type of headphone were sold in February?
-SELECT Prodyct, SUM(Quantity) as quantity
+SELECT Product, 
+    SUM(Quantity) as quantity
 FROM BIT_DB.FebSales
 WHERE Product like '%headphones%'
 GROUP BY Product;
@@ -95,7 +98,8 @@ WHERE length(orderid) = 6
 AND orderid <> 'Order ID';
 
 # 13. Which product brought in the most revenue in January and how much revenue did it bring in total?
-SELECT Product, SUM(Quantity*price) AS total_revenue
+SELECT Product, 
+    SUM(Quantity*price) AS total_revenue
 FROM BIT_DB.JanSales
 GROUP BY 1
 ORDER BY 2 DESC
