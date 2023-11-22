@@ -26,3 +26,46 @@ time_signature integer NOT NULL
 
 # Data exploration using SQL:
 
+# What is the average popularity, danceability, and energy of each artist?
+SELECT artist_name,
+    AVG(popularity),
+    AVG(danceability),
+    AVG(energy)
+FROM BIT_DB.Spotifydata
+GROUP BY 1
+ORDER BY 1;
+
+# Who are the Top 10 artists by popularity?
+SELECT artist_name, 
+  track_name, 
+  popularity
+FROM BIT_DB.Spotifydata
+ORDER BY popularity DESC
+LIMIT 10;
+
+# What artist releast the longest song?
+SELECT artist_name, 
+  track_name, 
+  MAX(duration_ms)
+FROM BIT_DB.Spotifydata;
+
+# What artist has the highest average danceability?
+SELECT artist_name, 
+  AVG(danceability)
+FROM BIT_DB.Spotifydata
+GROUP BY 1
+ORDER BY 2 DESC;
+LIMIT 1;
+
+# Finding out the average popularity for each artists, then, for every artist with an average popularity of 90 or above, showing their name, their average popularity, and labeling them as a “Top Star”.
+WITH artist_popularity AS (
+    SELECT s.artist_name AS artist, 
+        AVG(s.popularity) AS pop
+    FROM Spotifydata s
+    GROUP BY artist
+)
+SELECT artist, 
+    pop AS average_popularity,
+    'Top Star' AS tag
+FROM artist_popularity
+WHERE average_popularity>=90;
