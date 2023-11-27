@@ -1,0 +1,237 @@
+# In this SQL, I'm querying a database with multiple tables containing music, customer, and order data.
+# My queries gauge product popularity and revenue, create unique lists of customers, show employee productivity and find top performers, and find many other valuable insights hidden within the data.
+
+# Database: https://www.sqlitetutorial.net/sqlite-sample-database/
+
+
+# 1. Show Customers (their full names, customer ID, and country) who are not in the US.
+SELECT CustomerId, FirstName, LastName, Country
+FROM chinook.customers
+WHERE Country != 'USA';
+
+# 2. Show customers only in Brazil.
+SELECT * FROM chinook.customers
+WHERE Country = 'Brazil';
+
+# 3. Find the Invoices of customers who are from Brazil. The resulting table should show the customer's full name, Invoice ID, Date of the invoice, and billing country.
+SELECT c.FirstName, c.LastName, i.InvoiceId, i.InvoiceDate, i.BillingCountry
+FROM chinook.customers c
+RIGHT JOIN chinook.invoices i
+ON c.CustomerId = i.CustomerId
+WHERE c.Country = 'Brazil';
+
+# 4. Show the Employees who are Sales Agents.
+SELECT * FROM chinook.employees
+WHERE Title LIKE '%Sales%Agent%';
+
+# 5. Make a list of billing countries from the Invoice table.
+SELECT DISTINCT BillingCountry FROM chinook.Invoices;
+
+# 6. Show the Invoice Total, Customer name, Country, and Sales Agent name for all invoices and customers.6
+SELECT c.LastName, c.FirstName, c.country, e.LastName, e.FirstName, i.Total
+FROM chinook.employees e
+JOIN chinook.customers c
+ON e.EmployeeId = c.SupportRepId
+JOIN chinook.invoices i
+ON c.CustomerId = i.CustomerId;
+
+# 7. How many Invoices were there in 2009?
+SELECT COUNT(*) 
+FROM chinook.invoices
+WHERE CAST(strftime('%Y', InvoiceDate) AS INTEGER) IN ('2009');
+
+# 8. What are the total sales for 2009?
+SELECT SUM(Total)
+FROM chinook.invoices
+WHERE CAST(strftime('%Y', InvoiceDate) AS INTEGER) IN ('2009');
+
+# 9. Write a query that includes the purchased track name with each invoice line ID.
+SELECT ii.InvoiceLineId, t.Name
+FROM chinook.invoice_items ii
+JOIN chinook.tracks t
+ON ii.TrackId = t.TrackId;
+
+# 10. Write a query that includes the purchased track name AND artist name with each invoice line ID.
+SELECT ii.InvoiceLineId, a.Name AS Artist, t.Name AS Track
+FROM chinook.invoice_items ii
+LEFT JOIN chinook.tracks t
+    ON ii.TrackId = t.TrackId
+INNER JOIN chinook.albums album
+    ON t.AlbumId = album.AlbumId
+LEFT JOIN chinook.artists a
+    ON album.ArtistId = a.ArtistId;
+
+# 11. Provide a query that shows all the Tracks, and include the Album name, Media type, and Genre.
+SELECT t.Name AS 'Track Name', a.Title AS 'Album Title', m.Name AS 'Media Type', g.Name AS 'Genre'
+FROM chinook.tracks t
+JOIN chinook.albums a
+    ON t.AlbumId = a.AlbumId
+JOIN chinook.media_types m
+    ON t.MediaTypeId = m.MediaTypeId
+JOIN chinook.genres g
+    ON t.GenreId = g.GenreId;
+
+# 12. Show the total sales made by each sales agent.
+SELECT e.EmployeeId, e.FirstName, e.LastName, ROUND(SUM(i.Total), 2) AS 'Total Sales'
+FROM chinook.employees e
+JOIN chinook.customers c
+ON e.EmployeeId = c.SupportRepId
+JOIN chinook.invoices i
+ON c.CustomerId = i.CustomerId
+WHERE e.Title = 'Sales Support Agent'
+GROUP BY 1;
+
+# 13. Which sales agent made the most dollars in sales in 2009?
+SELECT e.EmployeeId, e.FirstName, e.LastName, ROUND(SUM(i.Total), 2) AS 'Total Sales'
+FROM chinook.employees e
+JOIN chinook.customers c
+ON e.EmployeeId = c.SupportRepId
+JOIN chinook.invoices i
+ON c.CustomerId = i.CustomerId
+WHERE e.Title = 'Sales Support Agent'
+AND CAST(strftime('%Y', InvoiceDate) AS INTEGER) IN ('2009')
+GROUP BY 1
+ORDER BY 4 DESC
+LIMIT 1;
+
+# 14. What are the top tracks by appearence in playlist?
+SELECT p.TrackId, 
+  t.Name AS "Track Name", 
+  COUNT(p.PlaylistId) AS "# of playlists track appears in" 
+FROM chinook.playlist_track p
+JOIN chinook.tracks t
+ON p.TrackId = t.TrackId
+GROUP BY 1
+ORDER BY 3 DESC
+LIMIT 50;
+
+# 15. Which tracks generated the most revenue?
+SELECT i.TrackId,
+  t.Name, 
+  SUM(i.UnitPrice * i.Quantity) AS "Total Revenue"
+FROM chinook.invoice_items i
+LEFT JOIN chinook.tracks t
+ON i.TrackId = t.TrackId
+GROUP BY 1
+ORDER BY 3 DESC
+LIMIT 10;
+
+# 16. Which ablums generated the most revenue?
+SELECT t.AlbumId, 
+  a.Title AS "Album Title", 
+  ROUND(SUM(i.UnitPrice * i.Quantity), 2) AS "Total Revenue"
+FROM chinook.invoice_items i
+JOIN chinook.tracks t
+ON i.TrackId = t.TrackId
+JOIN chinook.albums a
+ON t.AlbumId = a.AlbumId
+GROUP BY 1 
+ORDER BY 3 DESC
+LIMIT 10;
+
+# 17. What are the top 5 genres by revenue?
+SELECT t.GenreId, 
+  g.Name AS "Genre", 
+  ROUND(SUM(i.UnitPrice * i.Quantity), 2) AS "Total Revenue"
+FROM chinook.invoice_items i
+JOIN chinook.tracks t
+ON i.TrackId = t.TrackId
+JOIN chinook.genres g
+ON t.GenreId = g.GenreId
+GROUP BY 1 
+ORDER BY 3 DESC
+LIMIT 5;
+
+# 18. Which countries have the highest sales revenue and what percentage of total revenue does each country make up?
+WITH table1 AS (SELECT SUM(invoices.Total) AS "total_revenue" 
+  FROM invoices
+)	
+SELECT BillingCountry AS "Country", 
+  ROUND(SUM(Total), 2) AS "Total Revenue",
+  ROUND(((SUM(Total)/table1.total_revenue)*100), 2) AS "% of Total Revenue"
+FROM chinook.invoices, table1
+GROUP BY 1
+ORDER BY 3 DESC;
+
+# 19. How mnay customers did each employee suppert, what was their total revenue, and what was their average revenue per sale?
+WITH total_sales AS (SELECT CustomerId, SUM(Total) AS "sales"
+    FROM invoices
+    GROUP BY CustomerId
+)
+SELECT e.LastName, e.FirstName, 
+    COUNT(c.CustomerId) AS "# of Customers Supported",
+    ROUND(SUM(total_sales.sales), 2) AS "Total Revenue",
+    ROUND(AVG(sales), 2) AS "Average Revenue Per Sale"
+FROM chinook.employees e
+JOIN chinook.customers c
+ON e.EmployeeId = c.SupportRepId
+JOIN total_sales USING(CustomerId)
+GROUP BY EmployeeId;
+
+# 20. Do longer or shorter length albums tend to generate more revenue?
+WITH album_len AS (SELECT AlbumId, COUNT(TrackId) AS "len"
+  FROM tracks
+  GROUP BY 1
+),
+total_rev AS (SELECT tracks.AlbumId, 
+	ROUND(SUM(invoice_items.UnitPrice * invoice_items.Quantity), 2) AS "rev"
+  FROM invoice_items
+  JOIN tracks USING(TrackId)
+  GROUP BY 1
+)
+SELECT len AS "Number of tracks in album", 
+	ROUND(AVG(rev), 2) AS "Average album revenue"
+FROM album_len
+JOIN total_rev USING(AlbumId)
+GROUP BY 1
+ORDER BY 2 DESC;
+
+# 21. Is the number of times a track appears in different playlists a good indicator of sales?
+WITH pl_appearances AS (SELECT TrackId, COUNT(PlaylistId) AS "appearances" 
+    FROM playlist_track
+    GROUP BY TrackId
+),
+total_rev AS (SELECT tracks.TrackId, 
+    ROUND(SUM(invoice_items.UnitPrice * invoice_items.Quantity), 2) AS "rev"
+    FROM invoice_items
+    JOIN tracks USING(TrackId)
+    GROUP BY 1
+)
+SELECT appearances AS "No. of playlist track is in", 
+    ROUND(AVG(rev), 2) AS "Average track revenue",
+    ROUND(SUM(rev), 2) AS "Total Revenue"
+FROM pl_appearances
+JOIN total_rev USING(TrackId)
+GROUP BY 1
+ORDER BY 2 DESC;
+
+# 23. How much revenue is generated each year, and what is the percent change in revenue from the previous year?
+   23.1 For all years:
+    WITH previous_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS 'Previous_Year', 
+        ROUND(SUM(Total), 2) as 'Revenue'
+        FROM invoices
+        GROUP BY 1
+    ),
+    current_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS 'Year', 
+        ROUND(SUM(Total), 2) as 'Revenue'
+        FROM invoices
+        GROUP BY 1
+    )
+    SELECT *, 
+        ROUND((current_year.Revenue - previous_year.Revenue)/previous_year.Revenue * 100, 2) AS "% Change"
+    FROM current_year, previous_year
+    WHERE previous_year.Previous_Year = current_year.Year - 1;
+   23.2 For an individual year:
+    WITH previous_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS 'Previous Year', 
+        ROUND(SUM(Total), 2) as 'Revenue'
+        FROM invoices
+        WHERE CAST(strftime('%Y', InvoiceDate) AS INTEGER) IN ('2009')
+    ),
+    current_year AS (SELECT CAST(strftime('%Y', InvoiceDate) AS INTEGER) AS 'Year', 
+        ROUND(SUM(Total), 2) as 'Revenue'
+        FROM invoices
+        WHERE CAST(strftime('%Y', InvoiceDate) AS INTEGER) IN ('2010')
+    )
+    SELECT *, 
+        ROUND((current_year.Revenue-previous_year.Revenue)/previous_year.Revenue * 100, 2) AS "% Change"
+    FROM current_year, previous_year;
