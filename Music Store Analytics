@@ -94,16 +94,26 @@ GROUP BY 1
 ORDER BY 4 DESC
 LIMIT 1;
 
-# 14. What are the top tracks by appearence in playlist?
-SELECT p.TrackId, 
-  t.Name AS "Track Name", 
-  COUNT(p.PlaylistId) AS "# of playlists track appears in" 
-FROM chinook.playlist_track p
-JOIN chinook.tracks t
-ON p.TrackId = t.TrackId
-GROUP BY 1
-ORDER BY 3 DESC
-LIMIT 50;
+# 14. What are the top tracks by appearence in playlist and what are the names of each of the playlists those tracks appear in?
+WITH top_tracks AS (SELECT p.TrackId, 
+	  t.Name AS "Name", 
+	  COUNT(p.PlaylistId) AS "# of playlists track appears in" 
+	FROM playlist_track p
+	JOIN tracks t
+	ON p.TrackId = t.TrackId
+	GROUP BY 1
+	ORDER BY 3 DESC
+	LIMIT 41
+	)
+SELECT tt.TrackId,
+    tt."Name" AS "Track Name",
+    tt."# of playlists track appears in" AS "Playlist Appearances",
+    p.Name AS "Playlist Name"
+FROM top_tracks tt
+JOIN playlist_track pt 
+ON tt.TrackId = pt.TrackId
+JOIN playlists p 
+ON pt.PlaylistId = p.PlaylistId
 
 # 15. Which tracks generated the most revenue?
 SELECT i.TrackId,
